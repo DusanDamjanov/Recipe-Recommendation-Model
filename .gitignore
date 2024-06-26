@@ -1,5 +1,7 @@
-#moj deo [venv]
+#moj deo 
 receptiVenv/
+data/
+DUMMY.py
 
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
