@@ -1,9 +1,8 @@
 import loader as loader
 import vectorizer as vectorizer
-import naive_bayes as naive
+import naive_bayes_bp as naive
 import random_forest as rf
 import LSTM as LSTM
-import lstmpytorch as lstmpt
 import torch
 import random
 
@@ -27,12 +26,13 @@ def menu():
         print_menu()
         input = input("Select your option: ")
         if input == "1":
-            pass
+            LSTM.TRAIN()
         elif input == "2":
             pass
         elif input == "3":
             pass
         elif input == "4":
+            # LSTM.GENERATE()
             pass
         elif input == "5":
             pass

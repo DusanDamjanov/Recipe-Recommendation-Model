@@ -70,7 +70,7 @@ def process_json(dict):
 def load_dataset(silent = True):
     recipes_dataset = []
 
-    with open('data/recipes.json', 'r') as f:
+    with open('data/recipes-s.json', 'r') as f:
         recipes_list = json.load(f)
         recipes_keys = [key for key in recipes_list[0]]
         recipes_keys.sort()
@@ -181,49 +181,7 @@ def pad_vectorized_recepies(dataset_vectorized, vocabulary):
             recipe.append(end_token_int)
     return dataset_vectorized
 
-
-
-#HUMANS:
-def preprocess_human_input(input):
-    tokens = input.split()
-    tokens = tokenize(tokens)
-    return tokens
-
-# def translate_input_with_vocabulary(tokenized_input, vocabulary): #[[rec1 tokeni], [rec2 tokeni]....]
-#     translated_input = []
-#     for word in tokenized_input:
-#         if word in vocabulary:
-#             translated_input.append(vocabulary[word])
-#     return translated_input
-
-def handle_user_input(input, vocabulary):
-    input_tokens = preprocess_human_input(input)
-    translated_input = translate_to_nums(input_tokens, vocabulary)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    inputs = torch.tensor(translated_input).unsqueeze(0).to(device)
-    return inputs
-
-
-def create_datasets(sequences_dict):
-    train_dataset = RecipeDataset(sequences_dict['train'])
-    test_dataset = RecipeDataset(sequences_dict['test'])
-    val_dataset = RecipeDataset(sequences_dict['val'])
-
-    dataset_dict = {
-        'train': train_dataset,
-        'test': test_dataset,
-        'val': val_dataset
-    }
-
-    return dataset_dict
-
-def make_sequences(translated_recipes, sequence_len = 100):
-    sequences = []
-    for ints in translated_recipes:
-        for i in range(0, len(ints) - sequence_len):
-            sequences.append(ints[i:i + sequence_len + 1])
-    return sequences
-
+#uz pomoc numpy stvara sekvence tipa Dusa -> usan
 def make_sequences_np(translated_recipes, sequence_len=100):
     sequences = []
     for ints in translated_recipes:
@@ -233,42 +191,29 @@ def make_sequences_np(translated_recipes, sequence_len=100):
             sequences.extend([ints_array[i:i + sequence_len + 1] for i in range(num_sequences)])
     return sequences
 
-def make_sequences_parallel(translated_recipes, sequence_len=100, n_jobs=-1):
-    sequences = Parallel(n_jobs=n_jobs)(delayed(make_sequences)(ints, sequence_len) for ints in translated_recipes)
-    # Flatten the list of lists
-    return np.array([seq for sublist in sequences for seq in sublist])
+#HUMANS:
+#tokenizuj input ljudski (izdeli ga i dodaj razmake sta sve treba)
+def preprocess_human_input(input):
+    tokens = input.split()
+    tokens = tokenize(tokens)
+    return tokens
 
-def sequence_padding(batch):
-    # Separate inputs and targets from the batch
-    inputs = [item[0] for item in batch]
-    targets = [item[1] for item in batch]
-    
-    # Pad sequences to the same length
-    inputs = pad_sequence(inputs, batch_first=True, padding_value=0)
-    targets = pad_sequence(targets, batch_first=True, padding_value=0)
-    
-    return inputs, targets
+#fja koja priprema korisnicki input da ide u model
+def handle_user_input(input, vocabulary):
+    input_tokens = preprocess_human_input(input)
+    translated_input = translate_to_nums(input_tokens, vocabulary)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    inputs = torch.tensor(translated_input).unsqueeze(0).to(device)
+    return inputs
 
-
-def create_dataloaders(dataset_dict):
-    train_loader = DataLoader(dataset_dict['train'], batch_size=64, shuffle=True)  
-    test_loader = DataLoader(dataset_dict['test'], batch_size=64, shuffle=False)
-    val_loader = DataLoader(dataset_dict['val'], batch_size=64, shuffle=False)
-
-    dataloader_dict = {
-        'train': train_loader,
-        'test': test_loader,
-        'val': val_loader
-    }
-
-    return dataloader_dict
-
+#fja koja dopunjava svaki deo batcha [input i target] do iste duzine
 def collate_fn(batch):
     inputs, targets = zip(*batch)
     inputs_padded = pad_sequence(inputs, batch_first=True, padding_value=0)
     targets_padded = pad_sequence(targets, batch_first=True, padding_value=0)
     return inputs_padded, targets_padded.long() 
 
+#fja za evaluiranje
 def evaluate(model, dataloader, criterion, vocabulary_size):
     model.eval()
     total_loss = 0
@@ -293,7 +238,7 @@ def evaluate(model, dataloader, criterion, vocabulary_size):
     accuracy = total_correct / total_examples
     return total_loss / len(dataloader), accuracy
 
-
+#fja za treniranje
 def train(model, dataloader, criterion, optimizer, epoch, vocabulary_size):
     model.train()
     total_loss = 0
@@ -329,7 +274,7 @@ def train(model, dataloader, criterion, optimizer, epoch, vocabulary_size):
     print(f"Training epoch {epoch}, Loss: {total_loss / len(dataloader):.2f}, Accuracy: {total_correct / total_examples:.2f}")
     print(f"Training epoch lasted: {stop_time - start_time:.2f} seconds")
 
-
+#fja za generisanje recepta
 def generate_recipe(model, initial_sequences, start_text, max_length, temperature=0.7):
     model.eval()
     vocabulary_inverse = {index: word for word, index in vocabulary.items()}
@@ -356,6 +301,87 @@ def generate_recipe(model, initial_sequences, start_text, max_length, temperatur
     return generated_text
 
 
+
+
+def GENERATE(filename, start_text, max_len, temperature):
+    dataset = load_dataset()
+    dataset = [merge_recipe_string(recipe) for recipe in dataset]
+    print("=========================EXAMPLE========================")
+    print(dataset[0])
+    print("===========================================================")
+    dataset = filter_long_recepies(dataset)
+    print("dataset len: ",len(dataset))
+
+    print("data loaded successfuly")
+
+    vocabulary = build_vocab(dataset)
+    
+    model = torch.load( filename + '.pth')
+
+    user_sequences = handle_user_input(start_text, vocabulary)
+    print(generate_recipe(model, user_sequences, start_text, max_len, temperature=temperature))
+
+def TRAIN(filename):
+      
+    dataset = load_dataset()
+    dataset = [merge_recipe_string(recipe) for recipe in dataset]
+    dataset = filter_long_recepies(dataset)
+
+    print("data loaded successfuly")
+
+    vocabulary = build_vocab(dataset)
+
+    print("vocabulary has been built")
+
+    dataset_translated = [translate_to_nums(recipe, vocabulary) for recipe in dataset]
+
+    print("recipes translated")
+
+    dataset_translated_sequences = make_sequences_np(dataset_translated)
+
+    print("sequences created")
+
+    train_data, test_data = train_test_split(dataset_translated_sequences, test_size=0.2)
+    train_data, val_data = train_test_split(train_data, test_size=0.2)
+
+    print("data splitted")
+
+    dataset_train = RecipeDataset(train_data)
+    dataset_val = RecipeDataset(val_data)
+    dataset_test = RecipeDataset(test_data)
+
+    print("datasets created")
+
+    train_batches = DataLoader(dataset_train, batch_size=64, shuffle=True, collate_fn=collate_fn)
+    val_batches = DataLoader(dataset_val, batch_size=64, shuffle=False, collate_fn=collate_fn)
+    test_batches = DataLoader(dataset_test, batch_size=64, shuffle=False, collate_fn=collate_fn)
+
+    print("dataloaders created")
+
+    print(f"Train size: {len(dataset_train)}, Val size: {len(dataset_val)}, Test size: {len(dataset_test)}")
+
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    vocabulary_size = len(vocabulary) + 1
+    embedding_dim = 128
+    hidden_dim = 256
+    num_layers = 2
+
+    model = RecipeLSTM(vocabulary_size, embedding_dim, hidden_dim, num_layers).to(device)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+    print("training and evaluating on val dataset is beggining....")
+    num_epochs = 10
+    for epoch in range(1, num_epochs + 1):
+        train(model, train_batches, criterion, optimizer, epoch, vocabulary_size)
+        val_loss, val_accuracy = evaluate(model, val_batches, criterion, vocabulary_size)
+        print(f"Validation Loss: {val_loss:.2f}, Validation Accuracy: {val_accuracy:.2f}")
+    
+
+    torch.save(model, filename + '.pth')
+    
+
 if __name__ == "__main__":
 
     dataset = load_dataset()
@@ -380,82 +406,132 @@ if __name__ == "__main__":
     print(generate_recipe(model, user_sequences, "<TIT> C", 4000))
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
 
-#     if torch.cuda.is_available():
-#         print("CUDA is available.")
-#         print(f"CUDA version: {torch.version.cuda}")
-#         print(f"Number of GPUs: {torch.cuda.device_count()}")
-#         print(f"Current GPU: {torch.cuda.current_device()}")
-#         print(f"GPU name: {torch.cuda.get_device_name(torch.cuda.current_device())}")
-#     else:
-#         print("CUDA is not available.")
+    if torch.cuda.is_available():
+        print("CUDA is available.")
+        print(f"CUDA version: {torch.version.cuda}")
+        print(f"Number of GPUs: {torch.cuda.device_count()}")
+        print(f"Current GPU: {torch.cuda.current_device()}")
+        print(f"GPU name: {torch.cuda.get_device_name(torch.cuda.current_device())}")
+    else:
+        print("CUDA is not available.")
 
-#     dataset = load_dataset()
-#     dataset = [merge_recipe_string(recipe) for recipe in dataset]
-#     dataset = filter_long_recepies(dataset)
-#     print("dataset len: ",len(dataset))
+    dataset = load_dataset()
+    dataset = [merge_recipe_string(recipe) for recipe in dataset]
+    dataset = filter_long_recepies(dataset)
+    print("dataset len: ",len(dataset))
 
-#     print("data loaded successfuly")
+    print("data loaded successfuly")
 
-#     vocabulary = build_vocab(dataset)
+    vocabulary = build_vocab(dataset)
 
-#     print("vocabulary has been built")
+    print("vocabulary has been built")
 
-#     dataset_translated = [translate_to_nums(recipe, vocabulary) for recipe in dataset]
-#     print("dataset translated len:", len(dataset_translated))
+    dataset_translated = [translate_to_nums(recipe, vocabulary) for recipe in dataset]
+    print("dataset translated len:", len(dataset_translated))
 
-#     print("recipes translated")
+    print("recipes translated")
 
-#     # dataset_translated_padded = pad_vectorized_recepies(dataset_translated, vocabulary)
+    # dataset_translated_padded = pad_vectorized_recepies(dataset_translated, vocabulary)
 
-#     print("recepies padded")
+    print("recepies padded")
 
-#     dataset_translated_sequences = make_sequences_np(dataset_translated)
-#     print("dataset translated sequences len: ", len(dataset_translated_sequences))
+    dataset_translated_sequences = make_sequences_np(dataset_translated)
+    print("dataset translated sequences len: ", len(dataset_translated_sequences))
 
-#     print("sequences created")
+    print("sequences created")
 
-#     train_data, test_data = train_test_split(dataset_translated_sequences, test_size=0.2)
-#     train_data, val_data = train_test_split(train_data, test_size=0.2)
+    train_data, test_data = train_test_split(dataset_translated_sequences, test_size=0.2)
+    train_data, val_data = train_test_split(train_data, test_size=0.2)
 
-#     print("data splitted")
+    print("data splitted")
 
-#     dataset_train = RecipeDataset(train_data)
-#     dataset_val = RecipeDataset(val_data)
-#     dataset_test = RecipeDataset(test_data)
+    dataset_train = RecipeDataset(train_data)
+    dataset_val = RecipeDataset(val_data)
+    dataset_test = RecipeDataset(test_data)
 
-#     print("datasets created")
+    print("datasets created")
 
-#     train_batches = DataLoader(dataset_train, batch_size=64, shuffle=True, collate_fn=collate_fn)
-#     val_batches = DataLoader(dataset_val, batch_size=64, shuffle=False, collate_fn=collate_fn)
-#     test_batches = DataLoader(dataset_test, batch_size=64, shuffle=False, collate_fn=collate_fn)
+    train_batches = DataLoader(dataset_train, batch_size=64, shuffle=True, collate_fn=collate_fn)
+    val_batches = DataLoader(dataset_val, batch_size=64, shuffle=False, collate_fn=collate_fn)
+    test_batches = DataLoader(dataset_test, batch_size=64, shuffle=False, collate_fn=collate_fn)
 
-#     print("dataloaders created")
+    print("dataloaders created")
 
-#     print(f"Train size: {len(dataset_train)}, Val size: {len(dataset_val)}, Test size: {len(dataset_test)}")
+    print(f"Train size: {len(dataset_train)}, Val size: {len(dataset_val)}, Test size: {len(dataset_test)}")
 
 
-#     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#     vocabulary_size = len(vocabulary) + 1
-#     embedding_dim = 128
-#     hidden_dim = 256
-#     num_layers = 2
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    vocabulary_size = len(vocabulary) + 1
+    embedding_dim = 128
+    hidden_dim = 256
+    num_layers = 2
 
-#     model = RecipeLSTM(vocabulary_size, embedding_dim, hidden_dim, num_layers).to(device)
-#     criterion = nn.CrossEntropyLoss()
-#     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    model = RecipeLSTM(vocabulary_size, embedding_dim, hidden_dim, num_layers).to(device)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-#     print("training and evaluating on val dataset is beggining....")
-#     num_epochs = 10
-#     for epoch in range(1, num_epochs + 1):
-#         train(model, train_batches, criterion, optimizer, epoch, vocabulary_size)
-#         val_loss, val_accuracy = evaluate(model, val_batches, criterion, vocabulary_size)
-#         print(f"Validation Loss: {val_loss:.2f}, Validation Accuracy: {val_accuracy:.2f}")
+    print("training and evaluating on val dataset is beggining....")
+    num_epochs = 10
+    for epoch in range(1, num_epochs + 1):
+        train(model, train_batches, criterion, optimizer, epoch, vocabulary_size)
+        val_loss, val_accuracy = evaluate(model, val_batches, criterion, vocabulary_size)
+        print(f"Validation Loss: {val_loss:.2f}, Validation Accuracy: {val_accuracy:.2f}")
     
 
-#     torch.save(model, 'recipe_lstm_model_extra_tokens.pth')
+    torch.save(model, 'recipe_lstm_model_extra_tokens.pth')
 
 
 
 
+
+# def create_datasets(sequences_dict):
+#     train_dataset = RecipeDataset(sequences_dict['train'])
+#     test_dataset = RecipeDataset(sequences_dict['test'])
+#     val_dataset = RecipeDataset(sequences_dict['val'])
+
+#     dataset_dict = {
+#         'train': train_dataset,
+#         'test': test_dataset,
+#         'val': val_dataset
+#     }
+
+#     return dataset_dict
+
+# def make_sequences_parallel(translated_recipes, sequence_len=100, n_jobs=-1):
+#     sequences = Parallel(n_jobs=n_jobs)(delayed(make_sequences)(ints, sequence_len) for ints in translated_recipes)
+#     # Flatten the list of lists
+#     return np.array([seq for sublist in sequences for seq in sublist])
+
+
+# def make_sequences(translated_recipes, sequence_len = 100):
+#     sequences = []
+#     for ints in translated_recipes:
+#         for i in range(0, len(ints) - sequence_len):
+#             sequences.append(ints[i:i + sequence_len + 1])
+#     return sequences
+
+# def sequence_padding(batch):
+#     # Separate inputs and targets from the batch
+#     inputs = [item[0] for item in batch]
+#     targets = [item[1] for item in batch]
+    
+#     # Pad sequences to the same length
+#     inputs = pad_sequence(inputs, batch_first=True, padding_value=0)
+#     targets = pad_sequence(targets, batch_first=True, padding_value=0)
+    
+#     return inputs, targets
+
+# def create_dataloaders(dataset_dict):
+#     train_loader = DataLoader(dataset_dict['train'], batch_size=64, shuffle=True)  
+#     test_loader = DataLoader(dataset_dict['test'], batch_size=64, shuffle=False)
+#     val_loader = DataLoader(dataset_dict['val'], batch_size=64, shuffle=False)
+
+#     dataloader_dict = {
+#         'train': train_loader,
+#         'test': test_loader,
+#         'val': val_loader
+#     }
+
+#     return dataloader_dict
