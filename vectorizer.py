@@ -96,12 +96,15 @@ def vectorize(data_dict):
 
     y_train_ingredients = train_data['ingredients']
     y_train_instructions = train_data['instructions']
+    y_traing_title = train_data['title']
     
     y_val_ingredients = val_data['ingredients']
     y_val_instructions = val_data['instructions']
+    y_val_title = val_data['title']
     
     y_test_ingredients = test_data['ingredients']
     y_test_instructions = test_data['instructions']
+    y_test_title = test_data['title']
 
     vectorizer_dict = {
         'X_train': X_train,
@@ -109,10 +112,13 @@ def vectorize(data_dict):
         'X_test': X_test,
         'y_val_ingredients': y_val_ingredients,
         'y_val_instructions': y_val_instructions,
+        'y_val_title': y_val_title,
         'y_test_ingredients': y_test_ingredients,
         'y_test_instructions': y_test_instructions,
+        'y_val_instructions': y_val_instructions,
         'y_train_ingredients': y_train_ingredients,
         'y_train_instructions': y_train_instructions,
+        'y_train_title': y_traing_title,
         'vectorizer': vectorizer
     }
     return vectorizer_dict
