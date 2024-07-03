@@ -119,13 +119,7 @@ def create_pipeline():
 
 def train(pipeline, x_tr, y_tr, y_val, X_val):
     print("training starting...")
-
-    # print(x_tr.head())
-    # print(y_tr.head())
-    # print("Shape of training data:", x_tr.shape)
-    # print("Shape of expected data:", y_tr.shape)
-
-
+    
     pipeline.fit(x_tr, y_tr)
 
     print("training finished")
@@ -135,10 +129,41 @@ def train(pipeline, x_tr, y_tr, y_val, X_val):
     print(f'Accuracy of the model: {accuracy * 100:.2f}%')
     return pipeline
 
-def predict_outcome(pipeline, ingredients, instructions):
-    input_data = pd.DataFrame([[ingredients, instructions]], columns=FEATURES)
+def predict_outcome(pipeline, recipe):
+    input_data = pd.DataFrame([[recipe]], columns=FEATURES)
     cuisine = pipeline.predict(input_data)[0]
     return cuisine
+
+
+def GENERATE(filename, recipe):
+    
+    model = joblib.load("naive_bayes_models/recipes/" + filename + ".joblib")
+
+    input_data = pd.DataFrame({
+        "merged_recipe": [recipe]
+    })
+    cuisine = model.predict(input_data)[0]
+    print("Cuisine: ", cuisine)
+    return cuisine
+
+def TRAIN(filename):
+    dataset = load_dataset()
+    recipes_merged = [merge_recipe_string(recipe) for recipe in dataset]
+    
+    dataset = insert_merged_in_dataset(recipes_merged, dataset)
+
+
+    df = transform_data(dataset)
+
+    x_tr, x_test, X_val, y_tr, y_tst, y_val = preprocess_data_frame(df)
+
+    pipeline = create_pipeline()
+    pipeline = train(pipeline, x_tr, y_tr, y_val, X_val)
+    
+    joblib_file = "naive_bayes_models/recipes/" + filename + ".joblib"
+    joblib.dump(pipeline, joblib_file)
+
+
 
 if __name__ == "__main__":
     dataset = load_dataset()

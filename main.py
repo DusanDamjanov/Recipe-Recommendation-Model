@@ -1,12 +1,13 @@
-import naive_bayes_bp as naive
-import random_forest as rf
+import naive_bayes_salary as naive
+import random_forest_car_eval as rf
 import random_forest_recipes as RFRECIPES
-import random_forest as RF
+import random_forest_car_eval as RF
 import LSTM as LSTM
-import naive_bayes_bp as NB
+import naive_bayes_salary as NB
 import naive_bayes_recipes as NBRECIPES
 import os
 import tensorflow as tf
+from LSTM import RecipeLSTM
 
 def list_directory_contents(directory_path):
     try:
@@ -21,59 +22,95 @@ def list_directory_contents(directory_path):
 def print_menu():
     print("===============MENU================")
     print("1. Train new LSTM model")
-    print("2. Train new Naive Bayes (recipe) model") #TODO NOT DONE
-    print("3. Train new Naive Bayes (diabetes) model")
+    print("2. Train new Naive Bayes (recipe) model")
+    print("3. Train new Naive Bayes (salary) model")
     print("4. Train new Random Forest (recipe) model")  #TODO CONNECT TO MAIN LSTM
     print("5. Train new Random Forest (car_evaluation model")   #TODO: END GENERATING FUNCTION HERE
     print("6. Generate recipe")
     print("7. List all LSTM models")
     print("8. List all Naive Bayes (recipe) models")
-    print("9. List all Naive Bayes (diabetes) models")
+    print("9. List all Naive Bayes (salary) models")
     print("10. List all Random Forest (car evaluation) models")
     print("11. List all Random Forest (recipe) models")
-    # print("12 KLASIFIKUJ AUTO")       AKO STIGNES
-    # print("13 IMA LI DIJABETES?")
+    print("12. Evaluate salary")
+    print("13. Evaluate cars")
     print("X. Exit app")
 
 def menu():
-    input = ""
-    while input.upper() != "X":
+    option = ""
+    while option.upper() != "X":
+        print()
+        print()
         print_menu()
-        input = input("Select your option: ")
-        if input == "1":
+        option = input("Select your option: ")
+        if option == "1":
             filename = input("Please enter filename: ")
             LSTM.TRAIN(filename)
-        elif input == "2":
-            pass
-        elif input == "3":
+        elif option == "2":
+            filename = input("Please enter filename")
+            NBRECIPES.TRAIN(filename)
+        elif option == "3":
             filename = input("Please enter filename: ")
             NB.TRAIN(filename)
-        elif input == "4":
+        elif option == "4":
             filename = input("Please enter filename: ")
             RFRECIPES.TRAIN(filename)
-        elif input == "5":
+        elif option == "5":
             filename = input("Please enter filename: ")
             RF.TRAIN(filename)
-        elif input == "6":
-            # LSTM.GENERATE()
-            # RFRECIPES.CLASIFY()
+        elif option == "6":
+            filename_lstm = input("Enter which lstm model to use: ")
+            temperature_lstm = input("Enter lstm temperature: [0.5, 0.7, 1, 1.5]")
+            start_text = input("Enter starting text for lstm: [Should start with <TIT> ] ")
+            maxlen_lstm = input("Enter maximum lenght for recipe: ")
+            filename_rf = input("Enter which random forest model to use: ")
+            filename_nb = input("Enter which naive bayes model to use: ")
+            generated_recipe = LSTM.GENERATE(filename_lstm, start_text, int(maxlen_lstm), float(temperature_lstm))
+            generated_recipe = RFRECIPES.CLASIFY(generated_recipe, filename_rf)
+            NBRECIPES.GENERATE(filename_nb, generated_recipe)
             pass
-        elif input == "7":
+        elif option == "7":
             list_directory_contents("lstm_models")
-        elif input == "8":
+        elif option == "8":
             list_directory_contents("naive_bayes_models/recipes")
-        elif input == "9":
-            list_directory_contents("naive_bayes_models/diabetes") 
-        elif input == "10":
+        elif option == "9":
+            list_directory_contents("naive_bayes_models/salary") 
+        elif option == "10":
             list_directory_contents("random_forest_models/car_evaluation")
-        elif input == "11":
+        elif option == "11":
             list_directory_contents("random_forest_models/recipes")
+        elif option == "12":
+            filename = input("Please enter filename: ")
+            age = input("Please enter age [0+]: ")
+            workclass = input("Please enter workclass[Private, Self-emp-not-inc, Self-emp-inc, Federal-gov, Local-gov, State-gov, Without-pay, Never-worked]: ")
+            fnlwgt = input("Please enter fnlwgt[0+]: ")
+            education = input("Please enter education[Bachelors, Some-college, 11th, HS-grad, Prof-school, Assoc-acdm, Assoc-voc, 9th, 7th-8th, 12th, Masters, 1st-4th, 10th, Doctorate, 5th-6th, Preschool]: ")
+            education_num = input("Please enter education number [0+]: ")
+            marital_status = input("Please enter marital status [Married-civ-spouse, Divorced, Never-married, Separated, Widowed, Married-spouse-absent, Married-AF-spouse.]: ")
+            occupation = input("Please enter occupation [Tech-support, Craft-repair, Other-service, Sales, Exec-managerial, Prof-specialty, Handlers-cleaners, Machine-op-inspct, Adm-clerical, Farming-fishing, Transport-moving, Priv-house-serv, Protective-serv, Armed-Forces.]: ")
+            relationship = input("Please enter relationship [Wife, Own-child, Husband, Not-in-family, Other-relative, Unmarried.]: ")
+            race = input("Please enter race [White, Asian-Pac-Islander, Amer-Indian-Eskimo, Other, Black.]: ")
+            sex = input("Please enter sex [Male, Female]: ")
+            cgain = input("Please enter cgain [0+]: ")
+            closs = input("Please enter closs [0+]: ")
+            hr_per_week = input("Please enter hours per week [0+]: ")
+            country = input("Please enter country [United-States, Cambodia, England, Puerto-Rico, Canada, Germany, Outlying-US(Guam-USVI-etc), India, Japan, Greece, South, China, Cuba, Iran, Honduras, Philippines, Italy, Poland, Jamaica, Vietnam, Mexico, Portugal, Ireland, France, Dominican-Republic, Laos, Ecuador, Taiwan, Haiti, Columbia, Hungary, Guatemala, Nicaragua, Scotland, Thailand, Yugoslavia, El-Salvador, Trinadad&Tobago, Peru, Hong, Holand-Netherlands.]: ")
+            NB.PREDICT(filename, age, workclass, fnlwgt, education, education_num, marital_status, occupation, relationship, race, sex, cgain, closs, hr_per_week, country)
+        elif option == "13":
+            filename = input("Please enter filename: ")
+            buying = input("Please enter buying price [vhigh, high, med, low] ")
+            maint = input("Please enter maintnance price [vhigh, high, med, low]: ")
+            doors = input("Please enter doors [2, 3, 4, more]: ")
+            persons = input("Please enter persons [2, 4, more]: ")
+            lug_boot = input("Please enter lug_boot [small, med, big]: ")
+            safety = input("Please enter safety [low, med, high]: ")
+            RF.CLASIFY(buying, maint, doors, persons, lug_boot, safety, filename)
 
         
 
 
 if __name__=="__main__":
-    pass
+    menu()
 
 
 

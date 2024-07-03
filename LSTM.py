@@ -67,7 +67,7 @@ def process_json(dict):
     dict['instructions'] = manual[:-1]
 
 #otvara .json fajl, ucita iz fajla, preprocesuje svaki recept iz fajla [process_json] i za kraj sve to strpa u listu 
-def load_dataset(silent = True):
+def load_dataset():
     recipes_dataset = []
 
     with open('data/recipes-s.json', 'r') as f:
@@ -78,17 +78,6 @@ def load_dataset(silent = True):
         for recipe in recipes_list:
             process_json(recipe)
             recipes_dataset.append(recipe)
-
-        if silent is False:
-            print('===========================================')
-            print('Number of examples: ', len(recipes_list), '\n')
-            print('Example object keys:\n', recipes_keys, '\n')
-            print('Example object:\n', recipes_list[0], '\n')
-            print('Required keys:\n')
-            print('  title: ', recipes_list[0]['title'], '\n')
-            print('  ingredients: ', recipes_list[0]['ingredients'], '\n')
-            print('  instructions: ', recipes_list[0]['instructions'])
-            print('\n\n')
     
     return recipes_dataset
 
@@ -275,7 +264,7 @@ def train(model, dataloader, criterion, optimizer, epoch, vocabulary_size):
     print(f"Training epoch lasted: {stop_time - start_time:.2f} seconds")
 
 #fja za generisanje recepta
-def generate_recipe(model, initial_sequences, start_text, max_length, temperature=0.7):
+def generate_recipe(model, initial_sequences, start_text, max_length, vocabulary, temperature=0.7):
     model.eval()
     vocabulary_inverse = {index: word for word, index in vocabulary.items()}
     generated_text = "New recipe:\n" + start_text
@@ -306,20 +295,22 @@ def generate_recipe(model, initial_sequences, start_text, max_length, temperatur
 def GENERATE(filename, start_text, max_len, temperature):
     dataset = load_dataset()
     dataset = [merge_recipe_string(recipe) for recipe in dataset]
-    print("=========================EXAMPLE========================")
-    print(dataset[0])
-    print("===========================================================")
+    # print("=========================EXAMPLE========================")
+    # print(dataset[0])
+    # print("===========================================================")
     dataset = filter_long_recepies(dataset)
-    print("dataset len: ",len(dataset))
+    # print("dataset len: ",len(dataset))
 
-    print("data loaded successfuly")
+    # print("data loaded successfuly")
 
     vocabulary = build_vocab(dataset)
     
-    model = torch.load( filename + '.pth')
+    model = torch.load("lstm_models/" + filename + ".pth")
 
     user_sequences = handle_user_input(start_text, vocabulary)
-    print(generate_recipe(model, user_sequences, start_text, max_len, temperature=temperature))
+    generated_text = generate_recipe(model, user_sequences, start_text, max_len, vocabulary, temperature=temperature)
+    print(generated_text)
+    return generated_text
 
 def TRAIN(filename):
       
@@ -327,36 +318,36 @@ def TRAIN(filename):
     dataset = [merge_recipe_string(recipe) for recipe in dataset]
     dataset = filter_long_recepies(dataset)
 
-    print("data loaded successfuly")
+    # print("data loaded successfuly")
 
     vocabulary = build_vocab(dataset)
 
-    print("vocabulary has been built")
+    # print("vocabulary has been built")
 
     dataset_translated = [translate_to_nums(recipe, vocabulary) for recipe in dataset]
 
-    print("recipes translated")
+    # print("recipes translated")
 
     dataset_translated_sequences = make_sequences_np(dataset_translated)
 
-    print("sequences created")
+    # print("sequences created")
 
     train_data, test_data = train_test_split(dataset_translated_sequences, test_size=0.2)
     train_data, val_data = train_test_split(train_data, test_size=0.2)
 
-    print("data splitted")
+    # print("data splitted")
 
     dataset_train = RecipeDataset(train_data)
     dataset_val = RecipeDataset(val_data)
     dataset_test = RecipeDataset(test_data)
 
-    print("datasets created")
+    # print("datasets created")
 
     train_batches = DataLoader(dataset_train, batch_size=64, shuffle=True, collate_fn=collate_fn)
     val_batches = DataLoader(dataset_val, batch_size=64, shuffle=False, collate_fn=collate_fn)
     test_batches = DataLoader(dataset_test, batch_size=64, shuffle=False, collate_fn=collate_fn)
 
-    print("dataloaders created")
+    # print("dataloaders created")
 
     print(f"Train size: {len(dataset_train)}, Val size: {len(dataset_val)}, Test size: {len(dataset_test)}")
 
@@ -378,8 +369,8 @@ def TRAIN(filename):
         val_loss, val_accuracy = evaluate(model, val_batches, criterion, vocabulary_size)
         print(f"Validation Loss: {val_loss:.2f}, Validation Accuracy: {val_accuracy:.2f}")
     
-
-    torch.save(model, filename + '.pth')
+    torch.save(model, "lstm_models/" + filename + '.pth')
+    print("model saved")
     
 
 if __name__ == "__main__":
@@ -396,11 +387,11 @@ if __name__ == "__main__":
 
     vocabulary = build_vocab(dataset)
     
-    model = torch.load('lstm_padded.pth')
+    model = torch.load('lstm_models/lstm_1.pth')
 
-    user_sequences = handle_user_input("<TIT> C", vocabulary)
+    user_sequences = handle_user_input("<TIT> \n C", vocabulary)
     # print(len(user_tokens))
-    print(generate_recipe(model, user_sequences, "<TIT> C", 3000))
+    print(generate_recipe(model, user_sequences, "<TIT> C", 500))
 
 
 # if __name__ == "__main__":
