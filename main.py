@@ -1,23 +1,38 @@
-import loader as loader
-import vectorizer as vectorizer
 import naive_bayes_bp as naive
 import random_forest as rf
+import random_forest_recipes as RFRECIPES
+import random_forest as RF
 import LSTM as LSTM
-import torch
-import random
-
-import subprocess
+import naive_bayes_bp as NB
+import naive_bayes_recipes as NBRECIPES
 import os
 import tensorflow as tf
+
+def list_directory_contents(directory_path):
+    try:
+        contents = os.listdir(directory_path)
+        for file in contents:
+            print("File: ", file)
+    except FileNotFoundError:
+        return f"Error: The directory '{directory_path}' does not exist."
+    except PermissionError:
+        return f"Error: You do not have permission to access '{directory_path}'."
+
 def print_menu():
     print("===============MENU================")
     print("1. Train new LSTM model")
-    print("2. Train new Naive Bayes model")
-    print("3. Train new Random Forest model")
-    print("4. Generate recipe")
-    print("5. List all LSTM models")
-    print("5. List all Naive Bayes models")
-    print("7. List all Random Forest models")
+    print("2. Train new Naive Bayes (recipe) model") #TODO NOT DONE
+    print("3. Train new Naive Bayes (diabetes) model")
+    print("4. Train new Random Forest (recipe) model")  #TODO CONNECT TO MAIN LSTM
+    print("5. Train new Random Forest (car_evaluation model")   #TODO: END GENERATING FUNCTION HERE
+    print("6. Generate recipe")
+    print("7. List all LSTM models")
+    print("8. List all Naive Bayes (recipe) models")
+    print("9. List all Naive Bayes (diabetes) models")
+    print("10. List all Random Forest (car evaluation) models")
+    print("11. List all Random Forest (recipe) models")
+    # print("12 KLASIFIKUJ AUTO")       AKO STIGNES
+    # print("13 IMA LI DIJABETES?")
     print("X. Exit app")
 
 def menu():
@@ -26,21 +41,34 @@ def menu():
         print_menu()
         input = input("Select your option: ")
         if input == "1":
-            LSTM.TRAIN()
+            filename = input("Please enter filename: ")
+            LSTM.TRAIN(filename)
         elif input == "2":
             pass
         elif input == "3":
-            pass
+            filename = input("Please enter filename: ")
+            NB.TRAIN(filename)
         elif input == "4":
-            # LSTM.GENERATE()
-            pass
+            filename = input("Please enter filename: ")
+            RFRECIPES.TRAIN(filename)
         elif input == "5":
-            pass
+            filename = input("Please enter filename: ")
+            RF.TRAIN(filename)
         elif input == "6":
+            # LSTM.GENERATE()
+            # RFRECIPES.CLASIFY()
             pass
         elif input == "7":
-            pass
-        
+            list_directory_contents("lstm_models")
+        elif input == "8":
+            list_directory_contents("naive_bayes_models/recipes")
+        elif input == "9":
+            list_directory_contents("naive_bayes_models/diabetes") 
+        elif input == "10":
+            list_directory_contents("random_forest_models/car_evaluation")
+        elif input == "11":
+            list_directory_contents("random_forest_models/recipes")
+
         
 
 

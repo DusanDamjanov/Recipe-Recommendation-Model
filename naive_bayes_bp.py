@@ -12,6 +12,7 @@ from sklearn import metrics
 from sklearn.preprocessing import StandardScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
+import joblib
 
 #kolone cije podatke model uzima u razmatranje
 FEATURES = ["bloodpressure", "glucose"]
@@ -63,12 +64,36 @@ def train(pipeline, x_tr, y_tr, y_val, X_val):
     y_pred = pipeline.predict(X_val)
     accuracy = metrics.accuracy_score(y_val, y_pred)
     print(f'Accuracy of the model: {accuracy * 100:.2f}%')
+    return pipeline
 
 #fja koja preddictuje da li dijabetes ima ili nema
-def predict_outcome(glucose, blood_pressure):
+def predict_outcome(pipeline, glucose, blood_pressure):
     input_data = pd.DataFrame([[glucose, blood_pressure]], columns=FEATURES)
     has_diabetes = pipeline.predict(input_data)[0]
     return has_diabetes
+
+def TRAIN(filename):
+    dataframe = load_file()
+
+    print("dataset size: ", len(dataframe))
+
+    x_tr, x_test, X_val, y_tr, y_tst, y_val = preprocess_data_frame(dataframe)
+
+    print("X tr: ", len(x_tr))
+    print("X test: ", len(x_test))
+    print("X val: ", len(X_val))
+    print("Y tr: ", len(y_tr))
+    print("Y test: ", len(y_tst))
+    print("Y val: ", len(y_val))
+
+    pipeline = create_pipeline()
+
+    print("pipeline created, starting training...")
+
+    model = train(pipeline, x_tr, y_tr, y_val, X_val)
+    joblib_file = "naive_bayes_models/diabetes/" + filename + ".joblib"
+    joblib.dump(model, joblib_file)
+
 
 if __name__ == "__main__":
     dataframe = load_file()
@@ -93,5 +118,5 @@ if __name__ == "__main__":
     
     new_glucose = 41
     new_blood_pressure = 86
-    predicted_outcome = predict_outcome(new_glucose, new_blood_pressure)
+    predicted_outcome = predict_outcome(pipeline, new_glucose, new_blood_pressure)
     print(predicted_outcome)
