@@ -29,12 +29,14 @@ def clean_data(data):
     return data
 
 #ako kolona generalno ima sta sem brojeva bice tipa 'object' i onda daj je label encoderu da je enkodira u brojeve
-def encode_object_columns(dataset):
+def encode_object_columns(dataset, filename):
     label_encoders = {}
     for column in dataset.columns:
         if dataset[column].dtype == 'object':
             label_encoders[column] = LabelEncoder()
             dataset[column] = label_encoders[column].fit_transform(dataset[column])
+            if column == "class":   
+                joblib.dump(label_encoders[column], "random_forest_models/car_evaluation/label_encoder" + filename + ".joblib") 
     
     return dataset
 
@@ -69,7 +71,7 @@ def TRAIN(filename):
     # print("dataset cleaned....len: ", len(dataset_cleaned))
 
 
-    dataset_encoded = encode_object_columns(dataset_cleaned)
+    dataset_encoded = encode_object_columns(dataset_cleaned, filename)
     # print("dataset encoded")
     X_train, X_test, X_val, y_train, y_test, y_val = split_data(dataset_encoded)
     # print("dataset splitted")
@@ -92,15 +94,23 @@ def CLASIFY(buying, maint, doors, persons, lug_boot, safety, filename):
     # Load the model
     model = joblib.load("random_forest_models/car_evaluation/" + filename + ".joblib")
     
-    recipe_df = pd.DataFrame([buying, maint, doors, persons, lug_boot, safety])
+    recipe_df = pd.DataFrame({
+        "buying": [buying],
+        "maint": [maint],
+        "doors": [doors],
+        "persons": [persons],
+        "lug_boot": lug_boot,
+        "safety": safety
+    })
     
     # Preprocess the recipe data (this should match your preprocessing steps)
-    recipe_cleaned = clean_data(recipe_df)
-    recipe_encoded = encode_object_columns(recipe_cleaned)
+    # recipe_cleaned = clean_data(recipe_df)
+    recipe_encoded = encode_object_columns(recipe_df, filename)
     
     # Make prediction
     prediction = model.predict(recipe_encoded)
-    
+    labelenc = joblib.load("random_forest_models/car_evaluation/label_encoder" + filename + ".joblib")
+    prediction = labelenc.inverse_transform(prediction)
     print(prediction)
     return prediction
 

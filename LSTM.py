@@ -70,7 +70,7 @@ def process_json(dict):
 def load_dataset():
     recipes_dataset = []
 
-    with open('data/recipes-s.json', 'r') as f:
+    with open('data/modified.json', 'r') as f:
         recipes_list = json.load(f)
         recipes_keys = [key for key in recipes_list[0]]
         recipes_keys.sort()
@@ -208,7 +208,7 @@ def evaluate(model, dataloader, criterion, vocabulary_size):
     total_loss = 0
     total_correct = 0
     total_examples = 0
-
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     with torch.no_grad():
         for inputs, targets in dataloader:
             inputs, targets = inputs.to(device), targets.to(device)
@@ -233,7 +233,7 @@ def train(model, dataloader, criterion, optimizer, epoch, vocabulary_size):
     total_loss = 0
     total_correct = 0
     total_examples = 0
-
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     start_time = time.time()
 
     for inputs, targets in dataloader:

@@ -96,7 +96,7 @@ def insert_merged_in_dataset(merged_recipes, dataset):
 #     })
 #     return df
 
-def encode_object_columns(dataset):
+def encode_object_columns(dataset, filename):
     dataset = pd.DataFrame(dataset)
     columns_to_remove = ["url", "id", "title", "ingredients", "instructions", "partition", "cuisine"]
     if "id" in dataset.keys():
@@ -106,6 +106,8 @@ def encode_object_columns(dataset):
         if dataset[column].dtype == 'object':
             label_encoders[column] = LabelEncoder()
             dataset[column] = label_encoders[column].fit_transform(dataset[column])
+            if column == "level":
+                joblib.dump(label_encoders[column], "random_forest_models/recipes/label_encoder" + filename + ".joblib")
             
 
     return dataset
@@ -129,28 +131,32 @@ def train_model(model, X_train, y_train):
     return model
 
 
-# def TRAIN(filename):
-#     data = load_json_file("data/modified.json")
-#     df = extract_data(data)
-#     print("dataset loaded and prepared")
-#     encoded_df = encode_object_columns(df)
+def TRAIN(filename):
+    dataset = load_dataset()
+    recipes_merged = [merge_recipe_string(recipe) for recipe in dataset]
+    dataset = insert_merged_in_dataset(recipes_merged, dataset)
+
+    # data = load_json_file("data/modified.json")
+    # df = extract_data(data)
+    print("dataset loaded and prepared")
+    encoded_df = encode_object_columns(dataset, filename)
     
-#     print("dataset encoded")
+    print("dataset encoded")
 
-#     X_train, X_test, X_val, y_train, y_test, y_val = split_data(encoded_df)
-#     print("dataset splitted")
-#     model = build_model()
-#     print("beggining training...")
-#     model = train_model(model, X_train, y_train)
-#     y_pred = model.predict(X_val)
+    X_train, X_test, X_val, y_train, y_test, y_val = split_data(encoded_df)
+    print("dataset splitted")
+    model = build_model()
+    print("beggining training...")
+    model = train_model(model, X_train, y_train)
+    y_pred = model.predict(X_val)
 
-#     # Evaluate the model
-#     print("Accuracy:", accuracy_score(y_val, y_pred))
-#     print("\nClassification Report:\n", classification_report(y_val, y_pred))
+    # Evaluate the model
+    print("Accuracy:", accuracy_score(y_val, y_pred))
+    print("\nClassification Report:\n", classification_report(y_val, y_pred))
 
     
-#     joblib_file = "random_forest_models/recipes/" + filename + ".joblib"
-#     joblib.dump(model, joblib_file)
+    joblib_file = "random_forest_models/recipes/" + filename + ".joblib"
+    joblib.dump(model, joblib_file)
 
 
 
@@ -165,10 +171,11 @@ def CLASIFY(recipe, filename):
     })
     
     # Preprocess the recipe data (this should match your preprocessing steps)
-    recipe_encoded = encode_object_columns(recipe_df)
-    
+    recipe_encoded = encode_object_columns(recipe_df, filename)
+    labelenc = joblib.load("random_forest_models/recipes/label_encoder" + filename + ".joblib")
     # Make prediction
     prediction = model.predict(recipe_encoded)
+    prediction = labelenc.inverse_transform(prediction)
 
     print("\nLevel:" , prediction)
     return recipe_copy
